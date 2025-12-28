@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dados
+data/raw/*.csv
+data/processed/*.csv
+
+# Node
+node_modules/
+
+# Ambiente
+.env
