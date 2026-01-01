@@ -1,43 +1,32 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from datetime import datetime
-from app.services.deteccao import detector
-from app.schemas.transaction import TransactionInput, PredictionResponse
 
+from app.core.config import settings
+from app.api.v1.prediction import router as prediction_router
+from app.services.deteccao import detector
+
+# Inicializa FastAPI
 app = FastAPI(
-    title="Fraud Detection API",
+    title=settings.APP_NAME,
     description="API para detecção de transações financeiras suspeitas usando Machine Learning.",
-    version="1.0.0"
+    version="1.0.0",
+    debug=settings.DEBUG
 )
 
+# Health check
 @app.get("/health", tags=["Health"])
 def health_check():
-    """Endpoint de saúde da aplicação."""
+    """
+    Endpoint de saúde da aplicação.
+    Retorna status, nome do serviço, modelo carregado e timestamp.
+    """
+    status_code = 200 if detector.model else 503
     return {
-        "status": "ok",
-        "service": "fraud-detection-api",
+        "status": "ok" if detector.model else "unavailable",
+        "service": settings.APP_NAME,
         "model_loaded": detector.model is not None,
         "timestamp": datetime.utcnow()
-    }
+    }, status_code
 
-@app.post(
-    "/api/v1/predict",
-    response_model=PredictionResponse,
-    tags=["Prediction"]
-)
-def predict(request: TransactionInput):
-    """
-    Analisa uma transação financeira e retorna o risco de fraude.
-
-    - Recebe features normalizadas da transação
-    - Retorna score de risco e classificação
-    """
-
-    result = detector.predict_transaction(request.features)
-
-    if result.get("error"):
-        raise HTTPException(
-            status_code=500,
-            detail="Erro interno ao processar a transação"
-        )
-
-    return result
+# Inclui rotas versionadas
+app.include_router(prediction_router)

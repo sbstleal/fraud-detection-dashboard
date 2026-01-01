@@ -154,8 +154,8 @@ fraud-detection-dashboard/
 7. Endpoints (resumo)
 ----------------------
 
-- `GET /status` — health-check
-- `POST /predict` — recebe features e retorna `PredictionResponse` (ver `backend/app/schemas/transaction.py`)
+- `GET /health` — health-check
+- `POST /api/v1/predictict` — recebe features e retorna `PredictionResponse` (ver `backend/app/schemas/transaction.py`)
 - `GET /anomalies` — lista transações marcadas como suspeitas
 
 8. Limitações e Trabalhos Futuros
