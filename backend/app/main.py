@@ -1,39 +1,43 @@
 from fastapi import FastAPI, HTTPException
+from datetime import datetime
 from app.services.deteccao import detector
 from app.schemas.transaction import TransactionInput, PredictionResponse
 
 app = FastAPI(
-    title="API de Detecção de Fraudes",
-    description="API que utiliza Random Forest para identificar transações suspeitas em tempo real.",
+    title="Fraud Detection API",
+    description="API para detecção de transações financeiras suspeitas usando Machine Learning.",
     version="1.0.0"
 )
 
-@app.get("/")
-def read_root():
-    """Rota de verificação de saúde da API."""
+@app.get("/health", tags=["Health"])
+def health_check():
+    """Endpoint de saúde da aplicação."""
     return {
-        "status": "online", 
-        "message": "Bem-vindo ao Detector de Fraudes 🕵️‍♂️",
-        "model_loaded": detector.model is not None
+        "status": "ok",
+        "service": "fraud-detection-api",
+        "model_loaded": detector.model is not None,
+        "timestamp": datetime.utcnow()
     }
 
-@app.post("/predict", response_model=PredictionResponse)
+@app.post(
+    "/api/v1/predict",
+    response_model=PredictionResponse,
+    tags=["Prediction"]
+)
 def predict(request: TransactionInput):
     """
-    Analisa uma transação financeira.
-    
-    - **Recebe**: Um dicionário de features (Time, Amount, V1-V28).
-    - **Retorna**: Probabilidade de fraude e decisão (Bloquear/Aprovar).
+    Analisa uma transação financeira e retorna o risco de fraude.
+
+    - Recebe features normalizadas da transação
+    - Retorna score de risco e classificação
     """
-    
-    # O Pydantic já garantiu que 'request.features' existe e é um dicionário
-    features = request.features
-    
-    # Chama o serviço (Cérebro)
-    result = detector.predict_transaction(features)
-    
-    # Se houve erro interno no serviço (ex: modelo não carregou)
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-        
+
+    result = detector.predict_transaction(request.features)
+
+    if result.get("error"):
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno ao processar a transação"
+        )
+
     return result
