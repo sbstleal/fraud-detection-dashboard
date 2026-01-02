@@ -45,7 +45,6 @@ Sistema para detecção de anomalias em transações financeiras com API REST (F
 	- [Frontend (Dashboard)](#frontend-dashboard)
 - [Endpoints Principais](#endpoints-principais)
 - [Modelo de Machine Learning](#modelo-de-machine-learning)
-% Fraud Detection Dashboard — Relatório Técnico
 
 Autores: Sebastião de Oliveira Leal
 Data: 2025
