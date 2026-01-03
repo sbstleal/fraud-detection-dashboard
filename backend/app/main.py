@@ -14,7 +14,7 @@ def create_app() -> FastAPI:
         debug=settings.DEBUG
     )
 
-    # Startup
+    # 🔥 STARTUP
     app.add_event_handler("startup", startup_event)
 
     # Rotas

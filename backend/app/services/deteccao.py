@@ -1,10 +1,10 @@
 from pathlib import Path
 import logging
+from typing import Dict
 
 import joblib
 import numpy as np
 import pandas as pd
-
 
 logger = logging.getLogger(__name__)
 
@@ -12,22 +12,34 @@ logger = logging.getLogger(__name__)
 class FraudDetector:
     """
     Serviço responsável por aplicar o modelo de detecção de fraude
-    em DataFrames de transações.
+    em transações financeiras.
 
-    Funciona com modelo real ou em modo fallback (sem ML).
+    - Usa RandomForest + Scaler quando disponíveis
+    - Opera em modo fallback quando artefatos não existem
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = None
         self.scaler = None
         self._load_artifacts()
 
+    # ======================================================
+    # LOAD DE ARTEFATOS
+    # ======================================================
+
     def _load_artifacts(self) -> None:
-        base_dir = Path(__file__).resolve().parents[2]
-        models_dir = base_dir / "models"
+        """
+        Carrega modelo e scaler a partir de:
+        backend/app/ml/artifacts
+        """
+
+        app_dir = Path(__file__).resolve().parents[1]
+        models_dir = app_dir / "ml" / "artifacts"
 
         model_path = models_dir / "random_forest_v1.pkl"
         scaler_path = models_dir / "scaler_v1.pkl"
+
+        logger.info(f"📂 Procurando artefatos em: {models_dir}")
 
         if model_path.exists():
             self.model = joblib.load(model_path)
@@ -41,48 +53,52 @@ class FraudDetector:
         else:
             logger.warning(f"⚠️ Scaler não encontrado: {scaler_path}")
 
+    # ======================================================
+    # PROCESSAMENTO
+    # ======================================================
+
     def process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Aplica o modelo (ou fallback) em um DataFrame de transações.
-
-        Retorna o mesmo DataFrame com:
-        - prediction
-        - risk_score
-        - risk_level
-        """
-
         df = df.copy()
-
-        # Normaliza nomes
         df.columns = [c.lower() for c in df.columns]
 
-        # ==========================
-        # Fallback (sem ML)
-        # ==========================
+        # --------------------------
+        # FALLBACK (SEM ML)
+        # --------------------------
         if self.model is None or self.scaler is None:
-            logger.warning("⚠️ Executando detector em modo fallback (sem ML).")
+            logger.warning("⚠️ Detector em modo fallback (sem ML).")
+
+            if "amount" not in df.columns:
+                raise ValueError("Campo 'amount' é obrigatório")
 
             df["risk_score"] = np.clip(df["amount"] / 5000, 0, 1)
             df["prediction"] = np.where(df["risk_score"] >= 0.7, -1, 1)
 
-        # ==========================
-        # Modelo real
-        # ==========================
+        # --------------------------
+        # MODELO REAL
+        # --------------------------
         else:
-            features = df.drop(columns=["class"], errors="ignore")
+            # Validação forte
+            missing = [f"v{i}" for i in range(1, 29) if f"v{i}" not in df.columns]
+            if missing:
+                raise ValueError(f"Features faltando: {missing}")
 
-            if "amount" in features.columns:
-                features["scaled_amount"] = self.scaler.transform(
-                    features["amount"].values.reshape(-1, 1)
-                )
-                features.drop(columns=["amount"], inplace=True)
+            features = pd.DataFrame()
 
-            if "time" in features.columns:
-                features["scaled_time"] = self.scaler.transform(
-                    features["time"].values.reshape(-1, 1)
-                )
-                features.drop(columns=["time"], inplace=True)
+            # V1..V28 exatamente como no treino
+            for i in range(1, 29):
+                features[f"V{i}"] = df[f"v{i}"]
 
+            # Amount
+            features["scaled_amount"] = self.scaler.transform(
+                df["amount"].values.reshape(-1, 1)
+            )
+
+            # Time
+            features["scaled_time"] = self.scaler.transform(
+                df["time"].values.reshape(-1, 1)
+            )
+
+            # Ordem exata
             features = features[self.model.feature_names_in_]
 
             probs = self.model.predict_proba(features)[:, 1]
@@ -90,9 +106,9 @@ class FraudDetector:
             df["risk_score"] = probs
             df["prediction"] = np.where(probs >= 0.20, -1, 1)
 
-        # ==========================
-        # Risk level
-        # ==========================
+        # --------------------------
+        # RISK LEVEL
+        # --------------------------
         df["risk_level"] = pd.cut(
             df["risk_score"],
             bins=[-0.01, 0.3, 0.7, 1.0],
@@ -101,20 +117,31 @@ class FraudDetector:
 
         return df
 
-    def predict_transaction(self, features: dict) -> dict:
-        """
-        Predição unitária (endpoint POST).
-        """
+    # ======================================================
+    # PREDIÇÃO UNITÁRIA (POST /predict)
+    # ======================================================
 
+    def predict_transaction(self, features: Dict) -> Dict:
         df = pd.DataFrame([features])
         df = self.process_dataframe(df)
 
+        row = df.iloc[0]
+        is_fraud = row["prediction"] == -1
+
         return {
-            "prediction": int(df.iloc[0]["prediction"]),
-            "risk_score": float(df.iloc[0]["risk_score"]),
-            "risk_level": df.iloc[0]["risk_level"]
+            "is_fraud": bool(is_fraud),
+            "probability": float(row["risk_score"]),
+            "risk_level": row["risk_level"],
+            "message": (
+                "Fraude detectada"
+                if is_fraud
+                else "Transação legítima"
+            ),
         }
 
 
-# Instância global
+# ======================================================
+# SINGLETON
+# ======================================================
+
 detector = FraudDetector()

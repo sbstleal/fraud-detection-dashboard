@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException
-from app.services.deteccao import detector
+from fastapi import APIRouter, Depends
+from sqlmodel import Session
+
+from app.core.database import get_session
+from app.repositories.transactions_repository import TransactionsRepository
 
 router = APIRouter(
     prefix="/anomalies",
@@ -8,24 +11,29 @@ router = APIRouter(
 
 
 @router.get("")
-def get_anomalies():
-    if detector.df is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Dados ainda não carregados."
-        )
+def list_anomalies(
+    limit: int = 100,
+    offset: int = 0,
+    session: Session = Depends(get_session)
+):
+    repo = TransactionsRepository(session)
 
-    if "prediction" not in detector.df.columns:
-        raise HTTPException(
-            status_code=503,
-            detail="Modelo ainda não executou predições."
-        )
+    anomalies = repo.list_anomalies(
+        limit=limit,
+        offset=offset
+    )
 
-    anomalies = detector.df[detector.df["prediction"] == -1]
+    total = repo.count()
+    total_anomalies = repo.count_anomalies()
+
+    percentage = (
+        (total_anomalies / total) * 100
+        if total > 0 else 0
+    )
 
     return {
-        "total_transactions": len(detector.df),
-        "total_anomalies": len(anomalies),
-        "percentage": f"{(len(anomalies) / len(detector.df)) * 100:.2f}%",
-        "data": anomalies.to_dict(orient="records")
+        "total_transactions": total,
+        "total_anomalies": total_anomalies,
+        "percentage": f"{percentage:.2f}%",
+        "data": anomalies
     }

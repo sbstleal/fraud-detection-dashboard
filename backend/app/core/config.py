@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Fraud Detection API"
     DEBUG: bool = True
 
+    MODELS_DIR: str = "app/ml/artifacts"
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_SERVER: str

@@ -19,8 +19,9 @@ class KPIRepository:
 
     @staticmethod
     def total_anomalies(session: Session) -> int:
-        statement = select(func.count(Transaction.id)).where(
-            Transaction.prediction == -1
+        statement = (
+            select(func.count(Transaction.id))
+            .where(Transaction.prediction == -1)
         )
         return session.exec(statement).one()
 
@@ -35,9 +36,6 @@ class KPIRepository:
 
     @staticmethod
     def risk_distribution(session: Session) -> Dict[str, int]:
-        """
-        Retorna quantidade de transações por nível de risco.
-        """
         statement = (
             select(
                 Transaction.risk_level,
@@ -47,14 +45,13 @@ class KPIRepository:
         )
 
         results = session.exec(statement).all()
-
         return {risk: count for risk, count in results}
 
     @staticmethod
-    def daily_transactions(session: Session, limit: int = 30) -> List[dict]:
-        """
-        Retorna volume diário de transações (para gráfico de linha).
-        """
+    def daily_transactions(
+        session: Session,
+        limit: int = 30
+    ) -> List[dict]:
         statement = (
             select(
                 func.date(Transaction.created_at).label("day"),
@@ -73,10 +70,10 @@ class KPIRepository:
         ]
 
     @staticmethod
-    def daily_anomalies(session: Session, limit: int = 30) -> List[dict]:
-        """
-        Retorna volume diário de anomalias.
-        """
+    def daily_anomalies(
+        session: Session,
+        limit: int = 30
+    ) -> List[dict]:
         statement = (
             select(
                 func.date(Transaction.created_at).label("day"),
