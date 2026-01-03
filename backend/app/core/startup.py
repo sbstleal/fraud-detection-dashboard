@@ -1,38 +1,33 @@
-from pathlib import Path
+import logging
+from sqlalchemy import text
+from sqlmodel import Session
+
 from app.services.deteccao import detector
+from app.core.database import engine
+
+logger = logging.getLogger(__name__)
 
 
-def carregar_dados_csv():
+def startup_event():
     """
-    Localiza e carrega o dataset CSV durante o startup da aplicação.
-    Usado apenas em ambiente de desenvolvimento.
+    Executa verificações essenciais ao iniciar a aplicação.
+    NÃO carrega dados de CSV.
     """
 
-    print("🔄 [STARTUP] Iniciando carregamento de dados CSV...")
+    logger.info("🚀 [STARTUP] Iniciando aplicação...")
 
-    # Caminho do arquivo atual: backend/app/core/startup.py
-    current_file = Path(__file__).resolve()
+    # 1️⃣ Verifica modelo
+    if detector.model is None or detector.scaler is None:
+        logger.error("❌ Modelo ou Scaler NÃO carregados")
+    else:
+        logger.info("✅ Modelo e Scaler carregados")
 
-    # Sobe até a raiz do projeto
-    project_root = current_file.parent.parent.parent.parent
-
-    # Caminho esperado do CSV
-    csv_path = project_root / "data" / "raw" / "creditcard.csv"
-
-    print(f"📂 [STARTUP] Procurando arquivo em: {csv_path}")
-
-    if not csv_path.exists():
-        print("❌ [STARTUP] Arquivo creditcard.csv NÃO encontrado.")
-        print("⚠️ A aplicação irá subir sem dados carregados.")
-        return
-
+    # 2️⃣ Verifica conexão com banco
     try:
-        detector.processar_csv_historico(str(csv_path))
+        with Session(engine) as session:
+            session.exec(text("SELECT 1"))
+        logger.info("✅ Conexão com banco de dados OK")
+    except Exception as exc:
+        logger.critical(f"❌ Falha ao conectar no banco: {exc}")
 
-        if detector.df is not None and not detector.df.empty:
-            print(f"✅ [STARTUP] {len(detector.df)} transações carregadas com sucesso.")
-        else:
-            print("⚠️ [STARTUP] CSV carregado, mas DataFrame está vazio.")
-
-    except Exception as e:
-        print(f"❌ [STARTUP] Erro ao carregar CSV: {e}")
+    logger.info("🏁 [STARTUP] Finalizado")
