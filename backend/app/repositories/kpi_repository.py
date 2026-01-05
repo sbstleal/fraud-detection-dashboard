@@ -1,6 +1,4 @@
 from typing import Dict, List
-from datetime import date
-
 from sqlmodel import Session, select, func
 
 from app.models.transaction import Transaction
@@ -45,7 +43,11 @@ class KPIRepository:
         )
 
         results = session.exec(statement).all()
-        return {risk: count for risk, count in results}
+
+        return {
+            (risk or "UNKNOWN"): count
+            for risk, count in results
+        }
 
     @staticmethod
     def daily_transactions(
