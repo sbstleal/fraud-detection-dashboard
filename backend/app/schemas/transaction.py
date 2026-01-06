@@ -5,10 +5,6 @@ from datetime import datetime
 from app.models.transaction import RiskLevel
 
 
-# ======================================================
-# INPUT (PREDIÇÃO)
-# ======================================================
-
 class TransactionInput(BaseModel):
     features: Dict[str, float] = Field(
         ...,
@@ -44,20 +40,15 @@ class TransactionInput(BaseModel):
             "v26": -0.189115,
             "v27": 0.133558,
             "v28": -0.021053,
-        }
+        },
     )
 
 
 class PredictionResponse(BaseModel):
-    is_fraud: bool = Field(..., description="Indica se é fraude")
-    probability: float = Field(..., ge=0, le=1, description="Probabilidade de fraude")
-    risk_level: str = Field(..., description="LOW | MEDIUM | HIGH")
-    message: str = Field(..., description="Mensagem explicativa")
-
-
-# ======================================================
-# OUTPUT (LEITURA DE TRANSAÇÕES)
-# ======================================================
+    is_fraud: bool
+    probability: float = Field(..., ge=0, le=1)
+    risk_level: str
+    message: str
 
 class TransactionRead(BaseModel):
     id: int
@@ -101,31 +92,18 @@ class TransactionRead(BaseModel):
     class Config:
         from_attributes = True
 
-
-# ======================================================
-# PAGINAÇÃO
-# ======================================================
-
 class PaginatedTransactionsResponse(BaseModel):
     total: int
     limit: int
     offset: int
     items: List[TransactionRead]
 
-
-# ======================================================
-# FILTROS (QUERY PARAMS)
-# ======================================================
-
 class TransactionFilter(BaseModel):
-# --- FRAUDE ---
     is_fraud: Optional[bool] = None
 
-    # --- RISCO ---
     risk_level: Optional[RiskLevel] = None
-    min_risk_score: Optional[float] = None
-    max_risk_score: Optional[float] = None
+    min_risk_score: Optional[float] = Field(None, ge=0, le=1)
+    max_risk_score: Optional[float] = Field(None, ge=0, le=1)
 
-    # --- VALOR DA TRANSAÇÃO ---
     min_amount: Optional[float] = None
     max_amount: Optional[float] = None

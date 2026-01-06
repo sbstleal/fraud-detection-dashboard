@@ -24,7 +24,6 @@ def predict_transaction(
             detail="Modelo de fraude não carregado"
         )
 
-    # 1️⃣ Predição
     try:
         result = detector.predict_transaction(request.features)
     except Exception as exc:
@@ -33,7 +32,6 @@ def predict_transaction(
             detail=f"Erro ao executar modelo: {exc}"
         )
 
-    # 2️⃣ Persistência
     transaction = Transaction(
         **request.features,
         prediction=-1 if result["is_fraud"] else 1,
@@ -44,5 +42,4 @@ def predict_transaction(
     repo = TransactionsRepository(session)
     repo.create(transaction)
 
-    # 3️⃣ Retorno
     return result

@@ -5,21 +5,21 @@ from app.core.database import get_session
 from app.repositories.transactions_repository import TransactionsRepository
 from app.schemas.transaction import (
     TransactionFilter,
-    PaginatedTransactionsResponse
+    PaginatedTransactionsResponse,
 )
 
 router = APIRouter(
     prefix="/transactions",
-    tags=["Transações"]
+    tags=["Transações"],
 )
 
 
 @router.get("", response_model=PaginatedTransactionsResponse)
 def list_transactions(
-    limit: int = Query(20, le=100),
-    offset: int = Query(0, ge=0),
     filters: TransactionFilter = Depends(),
-    session: Session = Depends(get_session)
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    session: Session = Depends(get_session),
 ):
     repo = TransactionsRepository(session)
 
@@ -38,5 +38,5 @@ def list_transactions(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "items": items
+        "items": items,
     }

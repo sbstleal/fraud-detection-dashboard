@@ -14,10 +14,8 @@ def create_app() -> FastAPI:
         debug=settings.DEBUG
     )
 
-    # 🔥 STARTUP
     app.add_event_handler("startup", startup_event)
 
-    # Rotas
     app.include_router(health_router)
     app.include_router(api_router, prefix="/api/v1")
 

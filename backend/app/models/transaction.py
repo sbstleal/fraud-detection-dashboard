@@ -12,26 +12,14 @@ class RiskLevel(str, Enum):
 
 
 class Transaction(SQLModel, table=True):
-    """
-    Entidade central do sistema de detecção de fraudes.
-
-    Representa uma transação financeira processada pelo modelo
-    de Machine Learning, contendo:
-    - features originais
-    - resultado da predição
-    - score e nível de risco
-    """
 
     __tablename__ = "transactions"
 
-    # --- IDENTIFICAÇÃO ---
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    # --- FEATURES PRINCIPAIS ---
     time: float = Field(description="Tempo da transação em segundos")
     amount: float = Field(description="Valor da transação")
 
-    # --- FEATURES ANONIMIZADAS (PCA: V1 a V28) ---
     v1: float
     v2: float
     v3: float
@@ -61,7 +49,6 @@ class Transaction(SQLModel, table=True):
     v27: float
     v28: float
 
-    # --- RESULTADO DO MODELO ---
     prediction: int = Field(
         description="Resultado do modelo (-1 = anomalia, 1 = normal)",
         index=True
@@ -78,7 +65,6 @@ class Transaction(SQLModel, table=True):
         index=True
     )
 
-    # --- METADADOS ---
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="Data de inserção no sistema"

@@ -9,20 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 def startup_event():
-    """
-    Executa verificações essenciais ao iniciar a aplicação.
-    NÃO carrega dados de CSV.
-    """
 
     logger.info("🚀 [STARTUP] Iniciando aplicação...")
 
-    # 1️⃣ Verifica modelo
     if detector.model is None or detector.scaler is None:
         logger.error("❌ Modelo ou Scaler NÃO carregados")
     else:
         logger.info("✅ Modelo e Scaler carregados")
 
-    # 2️⃣ Verifica conexão com banco
     try:
         with Session(engine) as session:
             session.exec(text("SELECT 1"))

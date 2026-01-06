@@ -11,15 +11,9 @@ engine = create_engine(
 
 
 def create_db_and_tables():
-    """
-    Cria todas as tabelas definidas nos models.
-    """
     SQLModel.metadata.create_all(engine)
 
 
 def get_session():
-    """
-    Dependency para FastAPI.
-    """
     with Session(engine) as session:
         yield session
